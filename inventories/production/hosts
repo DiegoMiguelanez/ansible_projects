@@ -1,0 +1,8 @@
+[cliente]
+192.190.43.17 ansible_user=root ansible_ssh_pass=Virtual18 
+
+[cliente:vars]
+api_key="o/cOs1yGEO4jqg6ZKBWKRA==1iZjpp4v3TNWDph3"
+dominio_afectado=tucartomancia.com
+ansible_ssh_host=192.190.43.17
+

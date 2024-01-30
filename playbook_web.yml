@@ -1,0 +1,62 @@
+---
+- name: Comprobar acceso a Plesk y dominio
+  hosts: cliente
+  tasks:
+    - name: Comprobar acceso a Plesk
+      uri:
+        url: "https://{{ ansible_ssh_host }}:8443"
+        validate_certs: no
+      register: plesk_access
+      ignore_errors: yes
+
+    - name: Comprobar el estado de la URL "{{ dominio_afectado }}"
+      uri:
+        url: "http://{{ dominio_afectado }}"
+        method: GET
+        return_content: yes
+      register: resultado_uri
+      ignore_errors: yes
+    
+    - name: Chequeo de puertos
+      wait_for:
+        port: "{{ item }}"
+        timeout: 5
+        state: started
+        host: "{{ ansible_ssh_host }}"
+      loop:
+        - 80
+        - 443
+        - 8443
+        - 8447
+        - 53
+      register: port_status
+      ignore_errors: yes
+     
+    - name: Comprobar espacio en disco
+      command: df -h /
+      register: disk_status
+      ignore_errors: yes
+
+    - name: Mostrar resultados de la comprobación de espacio en disco
+      debug:
+        msg: "{{ disk_status.stdout_lines[1] }}"
+   
+    - name: Copiar archivo de plantilla resolv.conf (8.8.8.8 y 8.8.4.4)
+      ansible.builtin.template:
+        src: roles/web_check/templates/resolv.conf.j2
+        dest: /etc/resolv.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Rendimiento web - Check First time response (Pensar que otras añadir comprobables desde la terminal)
+      shell: |
+        curl -s -w "Tiempo total: %{time_total} segundos\nTiempo de conexión: %{time_connect} segundos\nTiempo de transferencia: %{time_starttransfer} segundos\n" -o /dev/null http://"{{ dominio_afectado }}"
+      register: web_performance
+      ignore_errors: yes
+
+    - name: Mostrar resultados del rendimiento web y Plesk
+      debug:
+        msg: "{{ web_performance.stdout_lines[1] }}"
+
+  

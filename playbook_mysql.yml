@@ -1,0 +1,65 @@
+---
+- name: Comprobar funcionamiento de Mysql/MariaDB
+  hosts: cliente
+  gather_facts: false
+  become: true  # Para obtener privilegios de superusuario
+
+  tasks:
+
+    - name: Verificar si MySQL está instalado
+      stat:
+        path: /etc/init.d/mysql
+      register: mysql_installed
+
+    - name: Verificar si MariaDB está instalado
+      stat:
+        path: /etc/init.d/mariadb
+      register: mariadb_installed
+
+    - name: A1. Comprobar estado del servicio MySQL
+      systemd:
+        name: mysql
+        # state: started
+      register: mysql_service_status
+      when: mysql_installed.stat.exists
+
+    - debug:
+        var: mysql_service_status.status.ActiveState
+      when: mysql_installed.stat.exists
+
+    - name: A2. Comprobar estado del servicio MariaDB
+      systemd:
+        name: mariadb
+        # state: started
+      register: mariadb_service_status
+      when: mariadb_installed.stat.exists
+
+    - debug:
+        var: mariadb_service_status.status.ActiveState
+      when: mariadb_installed.stat.exists  
+
+
+    - name: B1. Log Mysql
+      shell: "journalctl -xeu mariadb | tail -n 20" 
+      register: mariadb_log_result
+      when: mariadb_installed.stat.exists  
+
+    - debug:
+        var: mysql_log_result.stdout_lines
+      when: mysql_installed.stat.exists  
+
+    - name: B2. Log MariaDB
+      shell: "journalctl -xeu mariadb | tail -n 20" 
+      register: mariadb_log_result
+      when: mariadb_installed.stat.exists  
+
+    - debug:
+        var: mariadb_log_result.stdout_lines
+      when: mariadb_installed.stat.exists  
+
+    - name: C. Comprobar espacio en disco
+      command: df -h /
+      register: disk_space_result
+
+    - debug:
+         var: disk_space_result.stdout_lines

@@ -1,0 +1,46 @@
+---
+- name: Incidencia con Dominio
+  hosts: cliente  # Puedes cambiar esto según tus necesidades
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Instalar jq en sistemas basados en Debian (Ubuntu)
+      package:
+        name: jq
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+    
+    - name: Instalar jq en sistemas basados en Red Hat (CentOS)
+      package:
+        name: jq
+        state: present
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Devolver registrador actual con whois
+      shell: 'curl "https://api.api-ninjas.com/v1/whois?domain={{ dominio_afectado }}" -H "X-Api-Key: {{ api_key }}" | jq -r ''.registrar, .whois_server'''
+      register: whois_result
+
+    - name: Mostrar registrador actual con whois
+      debug:
+        msg: "{{ whois_result.stdout_lines[0] }} {{ whois_result.stdout_lines[1] }}"
+
+    - name: Devolver zona DNS
+      shell: 'curl "https://api.api-ninjas.com/v1/whois?domain={{ dominio_afectado }}" -H "X-Api-Key: {{ api_key }}" | jq .name_servers'
+      register: dns_zone_result
+    
+    - name: Mostrar Zona DNS
+      debug:
+        msg: "{{ dns_zone_result.stdout_lines }}"
+
+    - name: Devolver fecha de expiracion
+      shell: 'curl "https://api.api-ninjas.com/v1/whois?domain={{ dominio_afectado }}" -H "X-Api-Key: {{ api_key }}" | jq -r .expiration_date | xargs -I {} date -d @{} +"%Y-%m-%d %H:%M:%S"'
+      register: expiration_date_result
+
+    - name: Mostrar fecha de expiracion
+      debug:
+        msg: "{{ expiration_date_result.stdout }}"
+
+
+
+        

@@ -1,0 +1,48 @@
+---
+- name: Verificar rendimiento de red en la máquina cliente
+  hosts: cliente
+  gather_facts: true
+  become: true  # Para obtener privilegios de superusuario
+
+  tasks:
+    - name: Instalar iperf3 en sistemas basados en APT
+      package:
+        name: iperf3
+        state: present
+      when: ansible_pkg_mgr == 'apt'
+
+    - name: Instalar iperf3 en sistemas basados en YUM
+      package:
+        name: iperf3
+        state: present
+      when: ansible_pkg_mgr == 'yum'
+
+    - name: Copiar el script de rendimiento de red al directorio temporal local
+      template:
+        src: roles/connectivity_check/templates/rendimiento-red.sh
+        dest: /tmp/rendimiento-red.sh
+      register: template_result
+      
+
+    - debug:
+        var: template_result
+    
+    - name: Establecer permisos en el script
+      file:
+        path: /tmp/rendimiento-red.sh
+        mode: '0755'
+      when: template_result.changed
+
+    - name: Ejecutar el script de rendimiento de red
+      script: 
+        cmd: "/bin/bash /tmp/rendimiento-red.sh"
+      register: rendimiento_output
+      
+    - name: Mostrar resultados del script de rendimiento
+      debug:
+        var: rendimiento_output.stdout_lines
+
+    - name: Eliminar el script de rendimiento de red
+      file:
+        path: /tmp/rendimiento-red.sh
+        state: absent
